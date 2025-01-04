@@ -1,3 +1,42 @@
+"""
+Face Mask Classification Model Training Script
+
+This script trains a deep learning model for face mask detection using the MobileNetV2 architecture.
+It preprocesses the dataset, applies data augmentation, and fine-tunes the pre-trained model.
+
+Functions:
+---------
+detect_faces(image):
+    Detects faces in an image using Haar cascades.
+
+apply_canny(image):
+    Applies Canny edge detection to the given image.
+
+Variables:
+---------
+INIT_LR : float
+    Initial learning rate for the Adam optimizer.
+EPOCHS : int
+    Number of epochs for training.
+BS : int
+    Batch size for training.
+DIRECTORY : str
+    Path to the dataset directory.
+CATEGORIES : list of str
+    List of categories (e.g., "with_mask", "without_mask").
+data : list
+    List to store processed image data.
+labels : list
+    List to store image labels.
+face_cascade : cv2.CascadeClassifier
+    Haar cascade for face detection.
+
+Usage:
+-----
+Run this script to train a face mask classification model. After training, the model is saved as 'Mel.model',
+and training performance is visualized in 'plot.png'.
+"""
+
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.layers import AveragePooling2D
@@ -9,7 +48,6 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from tensorflow.keras.preprocessing.image import img_to_array
-from tensorflow.keras.preprocessing.image import load_img
 from tensorflow.keras.utils import to_categorical
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.model_selection import train_test_split
@@ -32,30 +70,56 @@ labels = []
 
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-
 def detect_faces(image):
+    """
+    Detect faces in an image using Haar cascades.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Input image in which faces are to be detected.
+
+    Returns
+    -------
+    faces : list
+        List of bounding boxes for detected faces [(x, y, w, h), ...].
+    """
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30), flags=cv2.CASCADE_SCALE_IMAGE)
     return faces
 
 def apply_canny(image):
+    """
+    Apply Canny edge detection to the given image.
+
+    Parameters
+    ----------
+    image : np.ndarray
+        Input image for edge detection.
+
+    Returns
+    -------
+    edges : np.ndarray
+        Image with edges detected using the Canny algorithm.
+    """
     edges = cv2.Canny(image, 100, 200)
     return edges
 
-for img in os.listdir(path):
-    img_path = os.path.join(path, img)
-    image = cv2.imread(img_path)
-    faces = detect_faces(image)
-    for (x, y, w, h) in faces:
-        face = image[y:y+h, x:x+w]
-        face = apply_canny(face)
-        face = cv2.resize(face, (224, 224))
-        face = img_to_array(face)
-        face = preprocess_input(face)
+for category in CATEGORIES:
+    path = os.path.join(DIRECTORY, category)
+    for img in os.listdir(path):
+        img_path = os.path.join(path, img)
+        image = cv2.imread(img_path)
+        faces = detect_faces(image)
+        for (x, y, w, h) in faces:
+            face = image[y:y+h, x:x+w]
+            face = apply_canny(face)
+            face = cv2.resize(face, (224, 224))
+            face = img_to_array(face)
+            face = preprocess_input(face)
 
-        data.append(face)
-        labels.append(category)
-
+            data.append(face)
+            labels.append(category)
 
 lb = LabelBinarizer()
 labels = lb.fit_transform(labels)
